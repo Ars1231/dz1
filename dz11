@@ -1,0 +1,181 @@
+#include <iostream>
+#include <fstream>
+using namespace std;
+
+struct Node {
+    int data;
+    Node* left;
+    Node* right;
+    Node* parent;
+
+    Node(int val, Node* parent_node = nullptr)
+        : data(val), left(nullptr), right(nullptr), parent(parent_node) {}
+};
+
+class BSTree {
+public:
+    BSTree() : root(nullptr) {}
+    BSTree(initializer_list<int> list) : root(nullptr) {
+        for (int value : list) {
+            add_element(value);
+        }
+    }
+
+    bool add_element(int value) {
+        if (root == nullptr) {
+            root = new Node(value);
+            return true;
+        }
+        Node* curr = root;
+        Node* parent = nullptr;
+        while (curr != nullptr) {
+            parent = curr;
+            if (value < curr->data) {
+                curr = curr->left;
+            } 
+            else if (value > curr->data) {
+                curr = curr->right;
+            } 
+            else {
+                return false; 
+            }
+        }
+        Node* newNode = new Node(value, parent);
+        if (value < parent->data) {
+            parent->left = newNode;
+        } 
+        else {
+            parent->right = newNode;
+        }
+        return true;
+    }
+
+    bool delete_element(int value) {
+        Node* nodeToDelete = find_node(value);
+        if (nodeToDelete == nullptr) {
+            return false;
+        }
+
+        if (nodeToDelete->left && nodeToDelete->right) {
+            Node* successor = find_min(nodeToDelete->right);
+            nodeToDelete->data = successor->data;
+            nodeToDelete = successor;
+        }
+
+        Node* child = nodeToDelete->left ? nodeToDelete->left : nodeToDelete->right;
+
+        if (child) {
+            child->parent = nodeToDelete->parent;
+        }
+
+        if (!nodeToDelete->parent) {
+            root = child;
+        } 
+        else{
+            if (nodeToDelete == nodeToDelete->parent->left) {
+                nodeToDelete->parent->left = child;
+            } 
+            else{
+                nodeToDelete->parent->right = child;
+            }
+        }
+
+        delete nodeToDelete;
+        return true;
+    }
+
+    bool find_element(int value) {
+        return find_node(value) != nullptr;
+    }
+
+    void print() {
+        inorder_print(root);
+        cout << endl;
+    }
+
+    bool save_to_file(const string& path) {
+        ofstream file(path);
+        if (!file.is_open()) return false;
+        save_preorder(root, file);
+        file.close();
+        return true;
+    }
+
+    bool load_from_file(const string& path) {
+        ifstream file(path);
+        if (!file.is_open()) return false;
+        clear_tree(root);
+        root = nullptr;
+        int value;
+        while (file >> value) {
+            add_element(value);
+        }
+        file.close();
+        return true;
+    }
+
+    ~BSTree() {
+        clear_tree(root);
+    }
+
+private:
+    Node* root;
+    Node* find_node(int value) {
+        Node* curr = root;
+        while (curr) {
+            if (value == curr->data) return curr;
+            else if (value < curr->data) curr = curr->left;
+            else curr = curr->right;
+        }
+        return nullptr;
+    }
+
+    Node* find_min(Node* node) {
+        while (node->left) {
+            node = node->left;
+        }
+        return node;
+    }
+
+    void inorder_print(Node* node) {
+        if (!node) return;
+        inorder_print(node->left);
+        cout << node->data << " ";
+        inorder_print(node->right);
+    }
+
+    void save_preorder(Node* node, ofstream& file) {
+        if (!node) return;
+        file << node->data << " ";
+        save_preorder(node->left, file);
+        save_preorder(node->right, file);
+    }
+
+    void clear_tree(Node* node) {
+        if (!node) return;
+        clear_tree(node->left);
+        clear_tree(node->right);
+        delete node;
+    }
+};
+
+int main() {
+    BSTree tree;
+    tree.add_element(20);
+    tree.add_element(30);
+    tree.add_element(10);
+    tree.add_element(50);
+    tree.add_element(25);
+    tree.add_element(35);
+    tree.add_element(45);
+    tree.print(); 
+    cout << "Удалить 20: " << tree.delete_element(20) << endl;
+    tree.print(); 
+    cout << "Найти 25: " << tree.find_element(25) << endl; // 1 (true)
+    cout << "Найти 20: " << tree.find_element(20) << endl; // 0 (false)
+    tree.save_to_file("tree.txt");
+    BSTree newTree;
+    newTree.load_from_file("tree.txt");
+    newTree.print(); 
+    return 0;
+}
